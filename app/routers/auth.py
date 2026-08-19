@@ -16,7 +16,10 @@ from app.oauth import oauth
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "https://uyen11a1-star.github.io/minecraft-modding-hub/",
+)
 
 
 # ---------------- Email + password ----------------
