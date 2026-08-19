@@ -20,7 +20,10 @@ app.add_middleware(
     secret_key=os.getenv("SECRET_KEY", "dev-secret-change-me"),
 )
 
-_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5500")
+_frontend_url = os.getenv(
+    "FRONTEND_URL",
+    "https://uyen11a1-star.github.io/minecraft-modding-hub/",
+)
 _parsed = urlparse(_frontend_url)
 FRONTEND_ORIGIN = f"{_parsed.scheme}://{_parsed.netloc}"
 
