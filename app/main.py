@@ -37,3 +37,24 @@ app.include_router(auth.router)
 @app.get("/")
 def health_check():
     return {"status": "ok", "service": "mc-modding-backend"}
+
+
+@app.get("/debug/env")
+def debug_env():
+    """Temporary route to verify environment variables are read correctly."""
+    def peek(value):
+        if not value:
+            return None
+        return {
+            "length": len(value),
+            "repr_first_10": repr(value[:10]),
+            "repr_last_10": repr(value[-10:]),
+            "has_leading_or_trailing_space": value != value.strip(),
+        }
+
+    return {
+        "GITHUB_CLIENT_ID": peek(os.getenv("GITHUB_CLIENT_ID")),
+        "GITHUB_CLIENT_SECRET": peek(os.getenv("GITHUB_CLIENT_SECRET")),
+        "FRONTEND_URL": os.getenv("FRONTEND_URL"),
+        "FRONTEND_ORIGIN": FRONTEND_ORIGIN,
+    }
