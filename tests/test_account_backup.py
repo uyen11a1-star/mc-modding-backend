@@ -90,6 +90,38 @@ class AccountBackupTests(unittest.TestCase):
         response = self.client.get("/account/backup")
         self.assertEqual(response.status_code, 401)
 
+    def test_restore_rejects_invalid_schema_avatar_and_missing_post_fields(self):
+        account = self.signup("restore-errors@example.com", "Restore errors")
+        headers = self.auth_headers(account["access_token"])
+        base_backup = {
+            "schema_version": "modden-backup-v1",
+            "exported_at": "2026-08-19T00:00:00",
+            "profile": {"name": "Restore errors", "avatar_url": None},
+            "posts": [],
+        }
+
+        wrong_version = self.client.post(
+            "/account/restore",
+            headers=headers,
+            json={"backup": {**base_backup, "schema_version": "modden-backup-v0"}},
+        )
+        self.assertEqual(wrong_version.status_code, 422)
+
+        bad_avatar = self.client.post(
+            "/account/restore",
+            headers=headers,
+            json={"backup": {**base_backup, "profile": {"name": "Restore errors", "avatar_url": "javascript:alert(1)"}}},
+        )
+        self.assertEqual(bad_avatar.status_code, 422)
+        self.assertIn("Avatar URL", bad_avatar.json()["detail"])
+
+        missing_post_content = self.client.post(
+            "/account/restore",
+            headers=headers,
+            json={"backup": {**base_backup, "posts": [{"title": "Missing content", "category": "Guide", "created_at": "2026-08-19T00:00:00"}]}},
+        )
+        self.assertEqual(missing_post_content.status_code, 422)
+
 
 if __name__ == "__main__":
     unittest.main()
