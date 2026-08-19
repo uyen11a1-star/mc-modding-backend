@@ -2,6 +2,8 @@
 
 FastAPI backend with email/password login and Google + GitHub OAuth.
 
+The current static frontend runs on `https://uyen11a1-star.github.io/minecraft-modding-hub/`. Set `FRONTEND_URL` to that exact URL in the deployment environment so OAuth returns to GitHub Pages after sign-in.
+
 ## 1. Run it in Termux (for testing)
 
 ```bash
