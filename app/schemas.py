@@ -29,3 +29,31 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class PostCreate(BaseModel):
+    title: str
+    content: str
+    category: str = "Dev log"
+
+
+class PostAuthor(BaseModel):
+    id: int
+    name: str | None
+    email: str
+    avatar_url: str | None
+
+    class Config:
+        from_attributes = True
+
+
+class PostOut(BaseModel):
+    id: int
+    title: str
+    content: str
+    category: str
+    created_at: datetime
+    author: PostAuthor
+
+    class Config:
+        from_attributes = True

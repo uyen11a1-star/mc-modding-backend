@@ -6,7 +6,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 
 from app.database import Base, engine
-from app.routers import auth
+from app.routers import auth, posts
+import app.models_post  # noqa: F401 — register Post table with Base
 
 load_dotenv()
 
@@ -32,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(posts.router)
 
 
 @app.get("/")
