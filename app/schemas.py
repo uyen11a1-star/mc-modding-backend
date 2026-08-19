@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class SignupRequest(BaseModel):
@@ -57,3 +59,35 @@ class PostOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BackupProfile(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    avatar_url: str | None = Field(default=None, max_length=2048)
+
+
+class BackupPost(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    content: str = Field(min_length=1, max_length=20000)
+    category: str = Field(default="Dev log", min_length=1, max_length=64)
+    created_at: datetime
+
+
+class BackupDocument(BaseModel):
+    schema_version: Literal["modden-backup-v1"]
+    exported_at: datetime
+    profile: BackupProfile
+    posts: list[BackupPost] = Field(default_factory=list, max_length=1000)
+
+
+class BackupExport(BackupDocument):
+    pass
+
+
+class RestoreRequest(BaseModel):
+    backup: BackupDocument
+
+
+class RestoreResponse(BaseModel):
+    restored_posts: int
+    profile_updated: bool
