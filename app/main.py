@@ -55,6 +55,8 @@ def debug_env():
     return {
         "GITHUB_CLIENT_ID": peek(os.getenv("GITHUB_CLIENT_ID")),
         "GITHUB_CLIENT_SECRET": peek(os.getenv("GITHUB_CLIENT_SECRET")),
+        "GOOGLE_CLIENT_ID": peek(os.getenv("GOOGLE_CLIENT_ID")),
+        "GOOGLE_CLIENT_SECRET": peek(os.getenv("GOOGLE_CLIENT_SECRET")),
         "FRONTEND_URL": os.getenv("FRONTEND_URL"),
         "FRONTEND_ORIGIN": FRONTEND_ORIGIN,
     }
