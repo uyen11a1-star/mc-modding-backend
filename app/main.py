@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -13,15 +14,18 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Minecraft Modding Community API")
 
-# Required by Authlib to store OAuth state between the redirect and callback
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SECRET_KEY", "dev-secret-change-me"),
 )
 
+_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5500")
+_parsed = urlparse(_frontend_url)
+FRONTEND_ORIGIN = f"{_parsed.scheme}://{_parsed.netloc}"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5500")],
+    allow_origins=[FRONTEND_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
