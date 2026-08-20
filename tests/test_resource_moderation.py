@@ -137,6 +137,21 @@ class ResourceModerationTests(unittest.TestCase):
             request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["reason"],
         )
 
+    def test_gemini_ignores_thought_text_before_structured_response(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = (
+            b'{"candidates":[{"content":{"parts":[{"thought":true,"text":"I will classify this."},'
+            b'{"text":"{\\"decision\\":\\"approved\\",\\"confidence\\":0.95,'
+            b'\\"reason\\":\\"Legitimate metadata.\\",\\"suggestedTags\\":[\\"shader\\"],'
+            b'\\"riskFlags\\":[]}"}]}}]}'
+        )
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
+            "app.moderation.request.urlopen", return_value=response
+        ):
+            result = moderate_resource(self.payload())
+        self.assertEqual(result["status"], "approved")
+
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")
         approved = {

@@ -122,7 +122,15 @@ def moderate_resource(metadata: dict) -> dict:
                 raise
         if body is None:
             return pending("Gemini moderation could not complete; resource remains pending.")
-        result = json.loads(body["candidates"][0]["content"]["parts"][0]["text"])
+        parts = body["candidates"][0]["content"]["parts"]
+        output_texts = [
+            part["text"]
+            for part in parts
+            if isinstance(part, dict) and isinstance(part.get("text"), str) and not part.get("thought", False)
+        ]
+        if not output_texts:
+            return pending("Gemini returned no structured moderation response.")
+        result = json.loads(output_texts[-1])
         decision = result["decision"]
         confidence = float(result["confidence"])
         reason = result["reason"]
