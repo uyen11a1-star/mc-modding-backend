@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
@@ -21,3 +21,20 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def migrate_resource_storage_columns():
+    """Add nullable R2 metadata columns to existing deployments without dropping data."""
+    if "resources" not in inspect(engine).get_table_names():
+        return
+    existing = {column["name"] for column in inspect(engine).get_columns("resources")}
+    additions = {
+        "file_key": "VARCHAR(512)",
+        "upload_state": "VARCHAR(24) NOT NULL DEFAULT 'metadata_only'",
+        "file_uploaded_at": "TIMESTAMP NULL",
+        "download_count": "INTEGER NOT NULL DEFAULT 0",
+    }
+    with engine.begin() as connection:
+        for column, definition in additions.items():
+            if column not in existing:
+                connection.execute(text(f"ALTER TABLE resources ADD COLUMN {column} {definition}"))

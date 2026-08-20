@@ -108,6 +108,10 @@ class ResourceCreate(BaseModel):
     file_size: int = Field(gt=0, le=500 * 1024 * 1024)
 
 
+class ResourceUploadInit(ResourceCreate):
+    pass
+
+
 class ResourceOut(BaseModel):
     id: int
     slug: str
@@ -120,9 +124,18 @@ class ResourceOut(BaseModel):
     release_version: str
     file_name: str
     file_size: int
+    upload_state: str
+    download_count: int
+    can_download: bool
     status: Literal["pending", "approved", "rejected"]
     moderation_reason: str | None
     moderation_confidence: float | None
     moderation_tags: list[str]
     created_at: datetime
     author: PostAuthor
+
+
+class ResourceUploadInitOut(ResourceOut):
+    upload_url: str
+    upload_content_type: str
+    upload_expires_in: int

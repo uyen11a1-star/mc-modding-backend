@@ -207,3 +207,37 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(len(self.client.get("/resources").json()), 1)
         mine = self.client.get("/resources/mine", headers=self.headers(account["access_token"])).json()
         self.assertEqual({item["status"] for item in mine}, {"approved", "rejected"})
+
+    def test_signed_upload_then_approved_download(self):
+        account = self.signup("storage-author@example.com")
+        approved = {
+            "status": "approved",
+            "reason": "Legitimate Minecraft resource metadata.",
+            "confidence": 0.92,
+            "suggested_tags": ["shader"],
+        }
+        with patch("app.routers.resources.create_upload_url", return_value=("https://upload.example", "application/zip")):
+            init = self.client.post(
+                "/resources/uploads/init", headers=self.headers(account["access_token"]), json=self.payload()
+            )
+        self.assertEqual(init.status_code, 200)
+        resource = init.json()
+        self.assertEqual(resource["upload_state"], "uploading")
+        self.assertFalse(resource["can_download"])
+        self.assertEqual(resource["upload_url"], "https://upload.example")
+
+        with patch("app.routers.resources.uploaded_size", return_value=2048), patch(
+            "app.routers.resources.moderate_resource", return_value=approved
+        ):
+            complete = self.client.post(
+                f"/resources/{resource['id']}/uploads/complete", headers=self.headers(account["access_token"])
+            )
+        self.assertEqual(complete.status_code, 200)
+        self.assertTrue(complete.json()["can_download"])
+
+        with patch("app.routers.resources.create_download_url", return_value="https://download.example"):
+            download = self.client.get(f"/resources/{resource['id']}/download", follow_redirects=False)
+        self.assertEqual(download.status_code, 307)
+        self.assertEqual(download.headers["location"], "https://download.example")
+        mine = self.client.get("/resources/mine", headers=self.headers(account["access_token"])).json()
+        self.assertEqual(mine[0]["download_count"], 1)

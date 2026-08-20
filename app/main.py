@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 
-from app.database import Base, engine
+from app.database import Base, engine, migrate_resource_storage_columns
 from app.routers import account, auth, posts, resources
 import app.models_post  # noqa: F401 — register Post table with Base
 import app.models_resource  # noqa: F401 — register Resource table with Base
@@ -13,6 +13,7 @@ import app.models_resource  # noqa: F401 — register Resource table with Base
 load_dotenv()
 
 Base.metadata.create_all(bind=engine)
+migrate_resource_storage_columns()
 
 app = FastAPI(title="Minecraft Modding Community API")
 
