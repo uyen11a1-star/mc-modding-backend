@@ -94,7 +94,7 @@ class ResourceModerationTests(unittest.TestCase):
         )
         self.assertEqual(request.get_header("Authorization"), "Bearer gemini-test-key")
         request_body = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(request_body["model"], "gemini-2.5-flash-lite")
+        self.assertEqual(request_body["model"], "gemini-3.7-flash")
         self.assertEqual(request_body["response_format"]["type"], "json_schema")
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):

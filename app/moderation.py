@@ -49,7 +49,7 @@ def moderate_resource(metadata: dict) -> dict:
     api_base = os.getenv(
         "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai"
     ).rstrip("/")
-    model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-2.5-flash-lite")
+    model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-3.7-flash")
     system = (
         "You moderate Minecraft resource metadata. Evaluate only supplied text and file name, "
         "never infer file bytes. Reject scams, malware claims, credential theft, impersonation, "
