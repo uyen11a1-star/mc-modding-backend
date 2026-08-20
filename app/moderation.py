@@ -69,6 +69,20 @@ def provider_error_reason(exc: error.HTTPError) -> str:
     return f"Gemini provider rejected the review request (HTTP {exc.code}){suffix}"
 
 
+def parse_structured_json(text: str) -> dict:
+    """Parse a provider JSON response, tolerating only an outer Markdown code fence."""
+    normalized = text.strip()
+    if normalized.startswith("```"):
+        _, separator, normalized = normalized.partition("\n")
+        if not separator:
+            raise json.JSONDecodeError("Missing fenced JSON body", text, 0)
+        normalized = normalized.rsplit("```", 1)[0].strip()
+    parsed = json.loads(normalized)
+    if not isinstance(parsed, dict):
+        raise json.JSONDecodeError("Expected JSON object", text, 0)
+    return parsed
+
+
 def moderate_resource(metadata: dict) -> dict:
     """Return approved/rejected only from validated model output; otherwise stay pending."""
     api_key = os.getenv("GEMINI_API_KEY")
@@ -130,11 +144,9 @@ def moderate_resource(metadata: dict) -> dict:
         if not output_texts:
             return pending("Gemini returned no structured moderation response.")
         try:
-            result = json.loads(output_texts[-1])
+            result = parse_structured_json(output_texts[-1])
         except json.JSONDecodeError:
             return pending("Gemini structured moderation response was not valid JSON.")
-        if not isinstance(result, dict):
-            return pending("Gemini structured moderation response was not an object.")
         required_fields = {"decision", "confidence", "reason", "suggestedTags", "riskFlags"}
         if not required_fields.issubset(result):
             return pending("Gemini structured moderation response omitted required fields.")

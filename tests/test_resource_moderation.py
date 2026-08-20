@@ -158,6 +158,20 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(result["status"], "pending")
         self.assertIn("omitted required fields", result["reason"])
 
+    def test_gemini_accepts_json_bounded_by_a_code_fence(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = (
+            b'{"candidates":[{"content":{"parts":[{"text":"```json\\n{\\"decision\\":\\"approved\\",'
+            b'\\"confidence\\":0.95,\\"reason\\":\\"Legitimate metadata.\\",'
+            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}\\n```"}]}}]}'
+        )
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
+            "app.moderation.request.urlopen", return_value=response
+        ):
+            result = moderate_resource(self.payload())
+        self.assertEqual(result["status"], "approved")
+
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")
         approved = {
