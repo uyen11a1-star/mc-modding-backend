@@ -70,7 +70,7 @@ def moderate_resource(metadata: dict) -> dict:
         "generationConfig": {
             "maxOutputTokens": 500,
             "responseFormat": {
-                "text": {"mimeType": "application/json", "schema": MODERATION_SCHEMA}
+                "text": {"mimeType": "application/json", "schema": MODERATION_SCHEMA["schema"]}
             },
         },
     }

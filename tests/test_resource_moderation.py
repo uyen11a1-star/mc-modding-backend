@@ -118,8 +118,10 @@ class ResourceModerationTests(unittest.TestCase):
             "application/json",
         )
         self.assertEqual(
-            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["name"],
-            "resource_moderation",
+            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["decision"][
+                "enum"
+            ],
+            ["approved", "rejected"],
         )
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
