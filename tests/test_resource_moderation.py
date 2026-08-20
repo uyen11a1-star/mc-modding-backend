@@ -124,7 +124,7 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertIn("Resource metadata", request_body["contents"][0]["parts"][0]["text"])
         self.assertEqual(
             request_body["generationConfig"]["responseFormat"]["text"]["mimeType"],
-            "application/json",
+            "APPLICATION_JSON",
         )
         self.assertEqual(
             request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["decision"][

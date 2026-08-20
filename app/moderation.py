@@ -98,7 +98,7 @@ def moderate_resource(metadata: dict) -> dict:
         "generationConfig": {
             "maxOutputTokens": 500,
             "responseFormat": {
-                "text": {"mimeType": "application/json", "schema": GEMINI_RESPONSE_SCHEMA}
+                "text": {"mimeType": "APPLICATION_JSON", "schema": GEMINI_RESPONSE_SCHEMA}
             },
         },
     }
