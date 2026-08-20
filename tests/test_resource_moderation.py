@@ -76,9 +76,9 @@ class ResourceModerationTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = (
-            b'{"choices":[{"message":{"content":"{\\"decision\\":\\"approved\\",'
+            b'{"candidates":[{"content":{"parts":[{"text":"{\\"decision\\":\\"approved\\",'
             b'\\"confidence\\":0.95,\\"reason\\":\\"Legitimate metadata.\\",'
-            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}}]}'
+            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}]}}]}'
         )
         unavailable = HTTPError("https://example.com", 503, "Unavailable", {}, None)
         with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
@@ -90,13 +90,13 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(1)
 
-    def test_gemini_uses_openai_compatible_endpoint_and_validates_json(self):
+    def test_gemini_uses_native_structured_output_endpoint_and_validates_json(self):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = (
-            b'{"choices":[{"message":{"content":"{\\"decision\\":\\"approved\\",'
+            b'{"candidates":[{"content":{"parts":[{"text":"{\\"decision\\":\\"approved\\",'
             b'\\"confidence\\":0.95,\\"reason\\":\\"Legitimate metadata.\\",'
-            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}}]}'
+            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}]}}]}'
         )
         with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
             "app.moderation.request.urlopen", return_value=response
@@ -108,12 +108,19 @@ class ResourceModerationTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(
             request.full_url,
-            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
         )
-        self.assertEqual(request.get_header("Authorization"), "Bearer gemini-test-key")
+        self.assertEqual(dict(request.header_items())["X-goog-api-key"], "gemini-test-key")
         request_body = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(request_body["model"], "gemini-3.7-flash")
-        self.assertEqual(request_body["response_format"]["type"], "json_schema")
+        self.assertIn("Resource metadata", request_body["contents"][0]["parts"][0]["text"])
+        self.assertEqual(
+            request_body["generationConfig"]["responseFormat"]["text"]["mimeType"],
+            "application/json",
+        )
+        self.assertEqual(
+            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["name"],
+            "resource_moderation",
+        )
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")

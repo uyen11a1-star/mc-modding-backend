@@ -47,9 +47,7 @@ def moderate_resource(metadata: dict) -> dict:
     if not api_key:
         return pending("Gemini moderation is not configured; resource remains pending.")
 
-    api_base = os.getenv(
-        "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai"
-    ).rstrip("/")
+    api_base = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
     model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-3.7-flash")
     system = (
         "You moderate Minecraft resource metadata. Evaluate only supplied text and file name, "
@@ -58,18 +56,28 @@ def moderate_resource(metadata: dict) -> dict:
         "relevant Minecraft metadata. Return only the required JSON."
     )
     payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(metadata, ensure_ascii=False)},
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": f"{system}\n\nResource metadata:\n"
+                        f"{json.dumps(metadata, ensure_ascii=False)}"
+                    }
+                ],
+            }
         ],
-        "response_format": {"type": "json_schema", "json_schema": MODERATION_SCHEMA},
-        "max_completion_tokens": 500,
+        "generationConfig": {
+            "maxOutputTokens": 500,
+            "responseFormat": {
+                "text": {"mimeType": "application/json", "schema": MODERATION_SCHEMA}
+            },
+        },
     }
     req = request.Request(
-        f"{api_base}/chat/completions",
+        f"{api_base}/models/{model}:generateContent",
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
         method="POST",
     )
     try:
@@ -86,7 +94,7 @@ def moderate_resource(metadata: dict) -> dict:
                 raise
         if body is None:
             return pending("Gemini moderation could not complete; resource remains pending.")
-        result = json.loads(body["choices"][0]["message"]["content"])
+        result = json.loads(body["candidates"][0]["content"]["parts"][0]["text"])
         decision = result["decision"]
         confidence = float(result["confidence"])
         if decision not in {"approved", "rejected"} or not 0 <= confidence <= 1:
