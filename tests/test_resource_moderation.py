@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 
@@ -64,13 +65,21 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertIn("not configured", result["reason"])
 
     def test_provider_error_stays_pending_and_reports_safe_http_status(self):
+        provider_error = HTTPError(
+            "https://example.com",
+            401,
+            "Unauthorized",
+            {},
+            BytesIO(b'{"error":{"message":"The supplied key is invalid."}}'),
+        )
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
             "app.moderation.request.urlopen",
-            side_effect=HTTPError("https://example.com", 401, "Unauthorized", {}, None),
+            side_effect=provider_error,
         ):
             result = moderate_resource(self.payload())
         self.assertEqual(result["status"], "pending")
         self.assertIn("HTTP 401", result["reason"])
+        self.assertIn("supplied key is invalid", result["reason"])
 
     def test_gemini_retries_once_after_temporary_503(self):
         response = MagicMock()

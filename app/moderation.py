@@ -56,6 +56,19 @@ def pending(reason: str) -> dict:
     }
 
 
+def provider_error_reason(exc: error.HTTPError) -> str:
+    """Return a bounded provider error description without exposing credentials."""
+    detail = ""
+    try:
+        response = json.loads(exc.read().decode("utf-8"))
+        detail = str(response.get("error", {}).get("message", ""))
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        detail = ""
+    normalized = " ".join(detail.split())[:280]
+    suffix = f": {normalized}" if normalized else ""
+    return f"Gemini provider rejected the review request (HTTP {exc.code}){suffix}"
+
+
 def moderate_resource(metadata: dict) -> dict:
     """Return approved/rejected only from validated model output; otherwise stay pending."""
     api_key = os.getenv("GEMINI_API_KEY")
@@ -133,7 +146,7 @@ def moderate_resource(metadata: dict) -> dict:
             "suggested_tags": suggested_tags,
         }
     except error.HTTPError as exc:
-        return pending(f"Gemini provider rejected the review request (HTTP {exc.code}).")
+        return pending(provider_error_reason(exc))
     except error.URLError:
         return pending("Gemini provider could not be reached; resource remains pending.")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
