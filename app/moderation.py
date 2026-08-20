@@ -76,7 +76,7 @@ def moderate_resource(metadata: dict) -> dict:
         return pending("Gemini moderation is not configured; resource remains pending.")
 
     api_base = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
-    model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-2.5-flash")
+    model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-3.6-flash")
     system = (
         "You moderate Minecraft resource metadata. Evaluate only supplied text and file name, "
         "never infer file bytes. Reject scams, malware claims, credential theft, impersonation, "

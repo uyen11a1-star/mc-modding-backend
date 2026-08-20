@@ -99,7 +99,7 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(1)
 
-    def test_gemini_uses_native_stable_structured_output_endpoint_and_validates_json(self):
+    def test_gemini_uses_native_current_structured_output_endpoint_and_validates_json(self):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = (
@@ -117,7 +117,7 @@ class ResourceModerationTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(
             request.full_url,
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
         )
         self.assertEqual(dict(request.header_items())["X-goog-api-key"], "gemini-test-key")
         request_body = json.loads(request.data.decode("utf-8"))
