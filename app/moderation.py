@@ -42,12 +42,14 @@ def pending(reason: str) -> dict:
 
 def moderate_resource(metadata: dict) -> dict:
     """Return approved/rejected only from validated model output; otherwise stay pending."""
-    api_key = os.getenv("MODERATION_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return pending("AI moderation is not configured; resource remains pending.")
+        return pending("Gemini moderation is not configured; resource remains pending.")
 
-    api_base = os.getenv("MODERATION_API_BASE", "https://api.openai.com/v1").rstrip("/")
-    model = os.getenv("MODERATION_MODEL", "gpt-5-mini")
+    api_base = os.getenv(
+        "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai"
+    ).rstrip("/")
+    model = os.getenv("GEMINI_MODERATION_MODEL", "gemini-2.5-flash-lite")
     system = (
         "You moderate Minecraft resource metadata. Evaluate only supplied text and file name, "
         "never infer file bytes. Reject scams, malware claims, credential theft, impersonation, "
@@ -86,10 +88,10 @@ def moderate_resource(metadata: dict) -> dict:
             "suggested_tags": result["suggestedTags"],
         }
     except error.HTTPError as exc:
-        return pending(f"AI provider rejected the review request (HTTP {exc.code}).")
+        return pending(f"Gemini provider rejected the review request (HTTP {exc.code}).")
     except error.URLError:
-        return pending("AI provider could not be reached; resource remains pending.")
+        return pending("Gemini provider could not be reached; resource remains pending.")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-        return pending("AI returned an invalid moderation response; resource remains pending.")
+        return pending("Gemini returned an invalid moderation response; resource remains pending.")
     except Exception:
-        return pending("AI moderation could not complete; resource remains pending.")
+        return pending("Gemini moderation could not complete; resource remains pending.")

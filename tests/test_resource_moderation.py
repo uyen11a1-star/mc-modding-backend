@@ -1,7 +1,8 @@
+import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -9,6 +10,7 @@ database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "resource-moderation-test-secret"
 os.environ.pop("MODERATION_API_KEY", None)
+os.environ.pop("GEMINI_API_KEY", None)
 
 from fastapi.testclient import TestClient
 
@@ -55,19 +57,45 @@ class ResourceModerationTests(unittest.TestCase):
             "file_size": 2048,
         }
 
-    def test_missing_ai_key_fails_closed_to_pending(self):
+    def test_missing_gemini_key_fails_closed_to_pending(self):
         result = moderate_resource(self.payload())
         self.assertEqual(result["status"], "pending")
         self.assertEqual(result["suggested_tags"], [])
+        self.assertIn("not configured", result["reason"])
 
     def test_provider_error_stays_pending_and_reports_safe_http_status(self):
-        with patch.dict(os.environ, {"MODERATION_API_KEY": "test-key"}), patch(
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
             "app.moderation.request.urlopen",
             side_effect=HTTPError("https://example.com", 401, "Unauthorized", {}, None),
         ):
             result = moderate_resource(self.payload())
         self.assertEqual(result["status"], "pending")
         self.assertIn("HTTP 401", result["reason"])
+
+    def test_gemini_uses_openai_compatible_endpoint_and_validates_json(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = (
+            b'{"choices":[{"message":{"content":"{\\"decision\\":\\"approved\\",'
+            b'\\"confidence\\":0.95,\\"reason\\":\\"Legitimate metadata.\\",'
+            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}}]}'
+        )
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
+            "app.moderation.request.urlopen", return_value=response
+        ) as urlopen:
+            result = moderate_resource(self.payload())
+
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(result["suggested_tags"], ["shader"])
+        request = urlopen.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        )
+        self.assertEqual(request.get_header("Authorization"), "Bearer gemini-test-key")
+        request_body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(request_body["model"], "gemini-2.5-flash-lite")
+        self.assertEqual(request_body["response_format"]["type"], "json_schema")
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")
