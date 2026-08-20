@@ -32,24 +32,28 @@ def storage_key(author_id: int, resource_id: int, filename: str) -> str:
 
 def _client():
     required = {
-        "R2_ACCOUNT_ID": os.getenv("R2_ACCOUNT_ID"),
-        "R2_ACCESS_KEY_ID": os.getenv("R2_ACCESS_KEY_ID"),
-        "R2_SECRET_ACCESS_KEY": os.getenv("R2_SECRET_ACCESS_KEY"),
-        "R2_BUCKET": os.getenv("R2_BUCKET"),
+        "B2_S3_ENDPOINT": os.getenv("B2_S3_ENDPOINT"),
+        "B2_KEY_ID": os.getenv("B2_KEY_ID"),
+        "B2_APPLICATION_KEY": os.getenv("B2_APPLICATION_KEY"),
+        "B2_BUCKET": os.getenv("B2_BUCKET"),
+        "B2_REGION": os.getenv("B2_REGION"),
     }
     missing = [name for name, value in required.items() if not value]
     if missing:
-        raise StorageUnavailable("Cloudflare R2 is not configured.")
+        raise StorageUnavailable("Backblaze B2 is not configured.")
+    endpoint = required["B2_S3_ENDPOINT"].rstrip("/")
+    if not endpoint.startswith("https://"):
+        endpoint = f"https://{endpoint}"
     return (
         boto3.client(
             "s3",
-            endpoint_url=f"https://{required['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-            aws_access_key_id=required["R2_ACCESS_KEY_ID"],
-            aws_secret_access_key=required["R2_SECRET_ACCESS_KEY"],
-            region_name="auto",
+            endpoint_url=endpoint,
+            aws_access_key_id=required["B2_KEY_ID"],
+            aws_secret_access_key=required["B2_APPLICATION_KEY"],
+            region_name=required["B2_REGION"],
             config=Config(signature_version="s3v4"),
         ),
-        required["R2_BUCKET"],
+        required["B2_BUCKET"],
     )
 
 
@@ -65,7 +69,7 @@ def create_upload_url(key: str, filename: str) -> tuple[str, str]:
         )
         return url, content_type
     except (BotoCoreError, ClientError) as exc:
-        raise StorageUnavailable("Cloudflare R2 could not issue an upload URL.") from exc
+        raise StorageUnavailable("Backblaze B2 could not issue an upload URL.") from exc
 
 
 def uploaded_size(key: str) -> int:
@@ -90,4 +94,4 @@ def create_download_url(key: str, filename: str) -> str:
             HttpMethod="GET",
         )
     except (BotoCoreError, ClientError) as exc:
-        raise StorageUnavailable("Cloudflare R2 could not issue a download URL.") from exc
+        raise StorageUnavailable("Backblaze B2 could not issue a download URL.") from exc

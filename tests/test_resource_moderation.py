@@ -12,6 +12,11 @@ os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "resource-moderation-test-secret"
 os.environ.pop("MODERATION_API_KEY", None)
 os.environ.pop("GEMINI_API_KEY", None)
+os.environ.pop("B2_S3_ENDPOINT", None)
+os.environ.pop("B2_KEY_ID", None)
+os.environ.pop("B2_APPLICATION_KEY", None)
+os.environ.pop("B2_BUCKET", None)
+os.environ.pop("B2_REGION", None)
 
 from fastapi.testclient import TestClient
 
