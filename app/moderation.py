@@ -31,6 +31,21 @@ MODERATION_SCHEMA = {
     },
 }
 
+# Gemini GenerateContent supports a defined JSON Schema subset. Keep provider-only
+# constraints compatible here and enforce additional limits after parsing.
+GEMINI_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "decision": {"type": "string", "enum": ["approved", "rejected"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "reason": {"type": "string"},
+        "suggestedTags": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
+        "riskFlags": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
+    },
+    "required": ["decision", "confidence", "reason", "suggestedTags", "riskFlags"],
+    "additionalProperties": False,
+}
+
 
 def pending(reason: str) -> dict:
     return {
@@ -70,7 +85,7 @@ def moderate_resource(metadata: dict) -> dict:
         "generationConfig": {
             "maxOutputTokens": 500,
             "responseFormat": {
-                "text": {"mimeType": "application/json", "schema": MODERATION_SCHEMA["schema"]}
+                "text": {"mimeType": "application/json", "schema": GEMINI_RESPONSE_SCHEMA}
             },
         },
     }
@@ -97,15 +112,25 @@ def moderate_resource(metadata: dict) -> dict:
         result = json.loads(body["candidates"][0]["content"]["parts"][0]["text"])
         decision = result["decision"]
         confidence = float(result["confidence"])
-        if decision not in {"approved", "rejected"} or not 0 <= confidence <= 1:
+        reason = result["reason"]
+        suggested_tags = result["suggestedTags"]
+        if (
+            decision not in {"approved", "rejected"}
+            or not 0 <= confidence <= 1
+            or not isinstance(reason, str)
+            or not 1 <= len(reason) <= 600
+            or not isinstance(suggested_tags, list)
+            or len(suggested_tags) > 8
+            or not all(isinstance(tag, str) and len(tag) <= 40 for tag in suggested_tags)
+        ):
             return pending("AI returned an invalid moderation decision.")
         if confidence < 0.6:
             return pending("AI confidence is too low for automatic publication.")
         return {
             "status": decision,
-            "reason": result["reason"],
+            "reason": reason,
             "confidence": confidence,
-            "suggested_tags": result["suggestedTags"],
+            "suggested_tags": suggested_tags,
         }
     except error.HTTPError as exc:
         return pending(f"Gemini provider rejected the review request (HTTP {exc.code}).")

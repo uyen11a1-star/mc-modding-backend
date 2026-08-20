@@ -123,6 +123,10 @@ class ResourceModerationTests(unittest.TestCase):
             ],
             ["approved", "rejected"],
         )
+        self.assertNotIn(
+            "minLength",
+            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["reason"],
+        )
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")
