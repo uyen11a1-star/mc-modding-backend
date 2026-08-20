@@ -72,6 +72,24 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(result["status"], "pending")
         self.assertIn("HTTP 401", result["reason"])
 
+    def test_gemini_retries_once_after_temporary_503(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = (
+            b'{"choices":[{"message":{"content":"{\\"decision\\":\\"approved\\",'
+            b'\\"confidence\\":0.95,\\"reason\\":\\"Legitimate metadata.\\",'
+            b'\\"suggestedTags\\":[\\"shader\\"],\\"riskFlags\\":[]}"}}]}'
+        )
+        unavailable = HTTPError("https://example.com", 503, "Unavailable", {}, None)
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), patch(
+            "app.moderation.request.urlopen", side_effect=[unavailable, response]
+        ) as urlopen, patch("app.moderation.time.sleep") as sleep:
+            result = moderate_resource(self.payload())
+
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(1)
+
     def test_gemini_uses_openai_compatible_endpoint_and_validates_json(self):
         response = MagicMock()
         response.__enter__.return_value = response

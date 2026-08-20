@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from urllib import error, request
 
 
@@ -72,8 +73,19 @@ def moderate_resource(metadata: dict) -> dict:
         method="POST",
     )
     try:
-        with request.urlopen(req, timeout=20) as response:  # nosec B310 -- configured HTTPS endpoint
-            body = json.loads(response.read().decode("utf-8"))
+        body = None
+        for attempt in range(2):
+            try:
+                with request.urlopen(req, timeout=20) as response:  # nosec B310 -- configured HTTPS endpoint
+                    body = json.loads(response.read().decode("utf-8"))
+                break
+            except error.HTTPError as exc:
+                if exc.code == 503 and attempt == 0:
+                    time.sleep(1)
+                    continue
+                raise
+        if body is None:
+            return pending("Gemini moderation could not complete; resource remains pending.")
         result = json.loads(body["choices"][0]["message"]["content"])
         decision = result["decision"]
         confidence = float(result["confidence"])
