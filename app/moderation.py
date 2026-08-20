@@ -129,7 +129,15 @@ def moderate_resource(metadata: dict) -> dict:
         ]
         if not output_texts:
             return pending("Gemini returned no structured moderation response.")
-        result = json.loads(output_texts[-1])
+        try:
+            result = json.loads(output_texts[-1])
+        except json.JSONDecodeError:
+            return pending("Gemini structured moderation response was not valid JSON.")
+        if not isinstance(result, dict):
+            return pending("Gemini structured moderation response was not an object.")
+        required_fields = {"decision", "confidence", "reason", "suggestedTags", "riskFlags"}
+        if not required_fields.issubset(result):
+            return pending("Gemini structured moderation response omitted required fields.")
         decision = result["decision"]
         confidence = float(result["confidence"])
         reason = result["reason"]
@@ -143,7 +151,7 @@ def moderate_resource(metadata: dict) -> dict:
             or len(suggested_tags) > 8
             or not all(isinstance(tag, str) and len(tag) <= 40 for tag in suggested_tags)
         ):
-            return pending("AI returned an invalid moderation decision.")
+            return pending("Gemini structured moderation decision failed validation.")
         if confidence < 0.6:
             return pending("AI confidence is too low for automatic publication.")
         return {
