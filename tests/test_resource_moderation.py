@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 database_file.close()
@@ -58,6 +59,15 @@ class ResourceModerationTests(unittest.TestCase):
         result = moderate_resource(self.payload())
         self.assertEqual(result["status"], "pending")
         self.assertEqual(result["suggested_tags"], [])
+
+    def test_provider_error_stays_pending_and_reports_safe_http_status(self):
+        with patch.dict(os.environ, {"MODERATION_API_KEY": "test-key"}), patch(
+            "app.moderation.request.urlopen",
+            side_effect=HTTPError("https://example.com", 401, "Unauthorized", {}, None),
+        ):
+            result = moderate_resource(self.payload())
+        self.assertEqual(result["status"], "pending")
+        self.assertIn("HTTP 401", result["reason"])
 
     def test_approved_resource_is_public_but_rejected_resource_is_not(self):
         account = self.signup("resource-author@example.com")

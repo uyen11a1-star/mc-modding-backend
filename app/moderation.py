@@ -2,7 +2,7 @@
 
 import json
 import os
-from urllib import request
+from urllib import error, request
 
 
 MODERATION_SCHEMA = {
@@ -85,5 +85,11 @@ def moderate_resource(metadata: dict) -> dict:
             "confidence": confidence,
             "suggested_tags": result["suggestedTags"],
         }
+    except error.HTTPError as exc:
+        return pending(f"AI provider rejected the review request (HTTP {exc.code}).")
+    except error.URLError:
+        return pending("AI provider could not be reached; resource remains pending.")
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return pending("AI returned an invalid moderation response; resource remains pending.")
     except Exception:
         return pending("AI moderation could not complete; resource remains pending.")
