@@ -91,3 +91,38 @@ class RestoreRequest(BaseModel):
 class RestoreResponse(BaseModel):
     restored_posts: int
     profile_updated: bool
+
+
+ResourceKind = Literal["Mod", "Resource Pack", "Shader Pack", "Datapack", "Plugin", "Modpack"]
+
+
+class ResourceCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=160)
+    summary: str = Field(min_length=10, max_length=220)
+    description: str = Field(min_length=20, max_length=20000)
+    kind: ResourceKind
+    minecraft_version: str = Field(min_length=2, max_length=32)
+    loader: str = Field(min_length=2, max_length=32)
+    release_version: str = Field(min_length=1, max_length=64)
+    file_name: str = Field(pattern=r"^.+\.(jar|zip|mrpack)$", max_length=255)
+    file_size: int = Field(gt=0, le=500 * 1024 * 1024)
+
+
+class ResourceOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    summary: str
+    description: str
+    kind: ResourceKind
+    minecraft_version: str
+    loader: str
+    release_version: str
+    file_name: str
+    file_size: int
+    status: Literal["pending", "approved", "rejected"]
+    moderation_reason: str | None
+    moderation_confidence: float | None
+    moderation_tags: list[str]
+    created_at: datetime
+    author: PostAuthor
