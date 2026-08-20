@@ -123,6 +123,9 @@ class ResourceModerationTests(unittest.TestCase):
         request_body = json.loads(request.data.decode("utf-8"))
         self.assertIn("Resource metadata", request_body["contents"][0]["parts"][0]["text"])
         self.assertEqual(request_body["generationConfig"]["responseMimeType"], "application/json")
+        self.assertEqual(request_body["generationConfig"]["maxOutputTokens"], 1024)
+        self.assertEqual(request_body["generationConfig"]["thinkingConfig"]["thinkingLevel"], "MINIMAL")
+        self.assertFalse(request_body["generationConfig"]["thinkingConfig"]["includeThoughts"])
         self.assertEqual(
             request_body["generationConfig"]["responseJsonSchema"]["properties"]["decision"]["enum"],
             ["approved", "rejected"],

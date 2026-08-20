@@ -110,9 +110,10 @@ def moderate_resource(metadata: dict) -> dict:
             }
         ],
         "generationConfig": {
-            "maxOutputTokens": 500,
+            "maxOutputTokens": 1024,
             "responseMimeType": "application/json",
             "responseJsonSchema": GEMINI_RESPONSE_SCHEMA,
+            "thinkingConfig": {"thinkingLevel": "MINIMAL", "includeThoughts": False},
         },
     }
     req = request.Request(
