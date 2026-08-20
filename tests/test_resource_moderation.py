@@ -99,7 +99,7 @@ class ResourceModerationTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(1)
 
-    def test_gemini_uses_native_structured_output_endpoint_and_validates_json(self):
+    def test_gemini_uses_native_stable_structured_output_endpoint_and_validates_json(self):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = (
@@ -117,24 +117,19 @@ class ResourceModerationTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(
             request.full_url,
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         )
         self.assertEqual(dict(request.header_items())["X-goog-api-key"], "gemini-test-key")
         request_body = json.loads(request.data.decode("utf-8"))
         self.assertIn("Resource metadata", request_body["contents"][0]["parts"][0]["text"])
+        self.assertEqual(request_body["generationConfig"]["responseMimeType"], "application/json")
         self.assertEqual(
-            request_body["generationConfig"]["responseFormat"]["text"]["mimeType"],
-            "APPLICATION_JSON",
-        )
-        self.assertEqual(
-            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["decision"][
-                "enum"
-            ],
+            request_body["generationConfig"]["responseJsonSchema"]["properties"]["decision"]["enum"],
             ["approved", "rejected"],
         )
         self.assertNotIn(
             "minLength",
-            request_body["generationConfig"]["responseFormat"]["text"]["schema"]["properties"]["reason"],
+            request_body["generationConfig"]["responseJsonSchema"]["properties"]["reason"],
         )
 
     def test_gemini_ignores_thought_text_before_structured_response(self):
